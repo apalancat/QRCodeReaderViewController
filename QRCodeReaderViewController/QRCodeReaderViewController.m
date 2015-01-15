@@ -40,6 +40,7 @@
 @property (strong, nonatomic) AVCaptureMetadataOutput    *metadataOutput;
 @property (strong, nonatomic) AVCaptureSession           *session;
 @property (strong, nonatomic) AVCaptureVideoPreviewLayer *previewLayer;
+@property (strong, nonatomic) NSArray *metadataTypes;
 
 @property (copy, nonatomic) void (^completionBlock) (NSString *);
 
@@ -54,8 +55,15 @@
 
 - (id)initWithCancelButtonTitle:(NSString *)cancelTitle
 {
+  return [self initWithCancelButtonTitle:NSLocalizedString(@"Cancel", @"Cancel") metadataTypes:@[AVMetadataObjectTypeQRCode]];
+}
+
+- (id)initWithCancelButtonTitle:(NSString *)cancelTitle metadataTypes:(NSArray *)metadataTypes
+{
   if ((self = [super init])) {
     self.view.backgroundColor = [UIColor blackColor];
+    
+    _metadataTypes = [metadataTypes copy];
     
     [self setupAVComponents];
     [self configureDefaultComponents];
@@ -208,9 +216,7 @@
   }
   
   [_metadataOutput setMetadataObjectsDelegate:self queue:dispatch_get_main_queue()];
-  if ([[_metadataOutput availableMetadataObjectTypes] containsObject:AVMetadataObjectTypeQRCode]) {
-    [_metadataOutput setMetadataObjectTypes:@[ AVMetadataObjectTypeQRCode ]];
-  }
+  [_metadataOutput setMetadataObjectTypes:self.metadataTypes];
   [_previewLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
   [_previewLayer setFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
   
@@ -273,23 +279,22 @@
 #pragma mark - AVCaptureMetadataOutputObjects Delegate Methods
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection
-{
-  for(AVMetadataObject *current in metadataObjects) {
-    if ([current isKindOfClass:[AVMetadataMachineReadableCodeObject class]]
-        && [current.type isEqualToString:AVMetadataObjectTypeQRCode]) {
-      NSString *scannedResult = [(AVMetadataMachineReadableCodeObject *) current stringValue];
-      
-      if (_completionBlock) {
-        _completionBlock(scannedResult);
-      }
-      
-      if (_delegate && [_delegate respondsToSelector:@selector(reader:didScanResult:)]) {
-        [_delegate reader:self didScanResult:scannedResult];
-      }
-      
-      break;
+{   
+    for (AVMetadataObject *metadata in metadataObjects) {
+        if ([self.metadataTypes containsObject:metadata.type]) {
+              NSString *scannedResult = [(AVMetadataMachineReadableCodeObject *) metadata stringValue];
+              
+              if (_completionBlock) {
+                _completionBlock(scannedResult);
+              }
+
+              if (_delegate && [_delegate respondsToSelector:@selector(reader:didScanResult:)]) {
+                [_delegate reader:self didScanResult:scannedResult];
+              }
+
+              break;
+          }
     }
-  }
 }
 
 #pragma mark - Checking the Metadata Items Types

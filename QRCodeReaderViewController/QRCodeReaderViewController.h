@@ -56,6 +56,8 @@
  */
 - (id)initWithCancelButtonTitle:(NSString *)cancelTitle;
 
+- (id)initWithCancelButtonTitle:(NSString *)cancelTitle metadataTypes:(NSArray *)metadataTypes;
+
 /**
  * @abstract Creates a view controller to read QRCodes from a displayed
  * video preview and a cancel button to be go back.
